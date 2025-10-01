@@ -1,0 +1,18 @@
+[
+  {
+    "year": 2025,
+    "month": 1,
+    "kilowatt_hours": 230.0,
+    "cost": 3333.0,
+    "emission_factor_kg_per_kwh": 0.7,
+    "id": 1
+  },
+  {
+    "year": 2025,
+    "month": 2,
+    "kilowatt_hours": 234.0,
+    "cost": 344.0,
+    "emission_factor_kg_per_kwh": 0.7,
+    "id": 2
+  }
+]
