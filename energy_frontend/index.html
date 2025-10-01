@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Energy Efficiency & Carbon Emissions</title>
+  <link rel="stylesheet" href="styles.css" />
+  <script defer src="config.js"></script>
+  <script defer src="app.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <style>
+    .hidden { display: none; }
+  </style>
+  <script>
+    // Basic fallback config if config.js fails to load
+    window.APP_CONFIG = window.APP_CONFIG || { baseUrl: 'http://127.0.0.1:8000' };
+  </script>
+  <meta http-equiv="Permissions-Policy" content="interest-cohort=()">
+</head>
+<body>
+  <header>
+    <h1>Energy Dashboard</h1>
+    <nav>
+      <button data-view="dashboard" class="active">Dashboard</button>
+      <button data-view="add-bill">Add Bill</button>
+      <button data-view="analysis">Analysis</button>
+      <button data-view="advice">Advice</button>
+      <button data-view="signin" style="margin-left:16px">Sign In</button>
+      <button data-view="profile">Profile</button>
+    </nav>
+  </header>
+
+  <main>
+    <section id="dashboard" class="view">
+      <div class="row" style="margin-bottom:12px">
+        <button id="refresh-dashboard">Refresh</button>
+        <button id="seed-data">Seed sample bills</button>
+      </div>
+      <div class="cards">
+        <div class="card">
+          <h3>Current Month</h3>
+          <div id="current-month"></div>
+        </div>
+        <div class="card">
+          <h3>Summary (All Time)</h3>
+          <div id="summary"></div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h3>Recent Usage</h3>
+        <table id="recent-usage">
+          <thead>
+            <tr>
+              <th>Year</th>
+              <th>Month</th>
+              <th>kWh</th>
+              <th>Cost</th>
+              <th>Emissions (kg)</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="add-bill" class="view hidden">
+      <div class="panel">
+        <h3>Add Bill</h3>
+        <form id="bill-form">
+          <div class="grid">
+            <label>Year<input type="number" name="year" required min="2000" max="2100" /></label>
+            <label>Month<input type="number" name="month" required min="1" max="12" /></label>
+            <label>kWh<input type="number" step="0.01" name="kilowatt_hours" required /></label>
+            <label>Cost<input type="number" step="0.01" name="cost" required /></label>
+            <label>Emission factor (kg/kWh)<input type="number" step="0.0001" name="emission_factor_kg_per_kwh" value="0.7" /></label>
+          </div>
+          <button type="submit">Submit</button>
+          <span id="bill-status" class="status"></span>
+        </form>
+      </div>
+
+      <div class="panel">
+        <h3>All Bills</h3>
+        <table id="bills">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Year</th>
+              <th>Month</th>
+              <th>kWh</th>
+              <th>Cost</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="analysis" class="view hidden">
+      <div class="row" style="margin-bottom:12px">
+        <button id="refresh-analysis">Refresh</button>
+      </div>
+      <div class="cards">
+        <div class="card">
+          <h3>Trend (MoM & 3-mo MA)</h3>
+          <canvas id="trend-chart" height="140"></canvas>
+          <div id="trends" class="hidden"></div>
+        </div>
+        <div class="card">
+          <h3>Predictions</h3>
+          <div class="row">
+            <label>Horizon (months)
+              <input id="horizon" type="number" min="1" max="24" value="3" />
+            </label>
+            <button id="predict-btn">Predict</button>
+          </div>
+          <canvas id="prediction-chart" height="140"></canvas>
+          <div id="predictions" class="hidden"></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="advice" class="view hidden">
+      <div class="row" style="margin-bottom:12px">
+        <button id="refresh-advice">Refresh</button>
+      </div>
+      <div class="panel">
+        <h3>Advice</h3>
+        <ul id="advice-list"></ul>
+      </div>
+    </section>
+
+    <section id="signin" class="view hidden">
+      <div class="panel">
+        <h3>Sign In</h3>
+        <form id="signin-form">
+          <div class="grid" style="grid-template-columns: repeat(2, 1fr);">
+            <label>Username<input type="text" name="username" required /></label>
+            <label>Password<input type="password" name="password" required /></label>
+          </div>
+          <button type="submit">Sign In</button>
+          <span id="signin-status" class="status"></span>
+        </form>
+      </div>
+
+      <div class="panel">
+        <h3>Or Sign In with OTP</h3>
+        <form id="otp-request-form" class="row">
+          <label>Mobile/Email <input type="text" name="contact" required /></label>
+          <button type="submit">Request OTP</button>
+          <span id="otp-request-status" class="status"></span>
+        </form>
+        <form id="otp-verify-form" class="row" style="margin-top:8px">
+          <label>OTP <input type="text" name="otp" required /></label>
+          <button type="submit">Verify OTP</button>
+          <span id="otp-verify-status" class="status"></span>
+        </form>
+      </div>
+    </section>
+
+    <section id="profile" class="view hidden">
+      <div class="panel">
+        <h3>Profile</h3>
+        <div id="profile-info">Signed in: <span id="profile-signed">No</span></div>
+      </div>
+
+      <div class="panel">
+        <h3>Carbon Emissions Calculator</h3>
+        <form id="calc-form" class="row">
+          <label>kWh <input type="number" step="0.01" name="kwh" required></label>
+          <label>Emission factor (kg/kWh) <input type="number" step="0.0001" name="factor" value="0.7"></label>
+          <button type="submit">Calculate</button>
+          <span id="calc-result" class="status"></span>
+        </form>
+      </div>
+
+      <div class="panel">
+        <h3>Energy Consumption Analyzer</h3>
+        <div id="averages"></div>
+      </div>
+
+      <div class="panel">
+        <h3>Estimate Emission Factor from Bill</h3>
+        <form id="factor-form" class="row">
+          <label>Total cost <input type="number" step="0.01" name="total_cost" required></label>
+          <label>kWh <input type="number" step="0.01" name="kwh" required></label>
+          <label>Energy price/kWh <input type="number" step="0.0001" name="energy_price_per_kwh" value="0.10"></label>
+          <label>Carbon price/kg <input type="number" step="0.0001" name="carbon_price_per_kg" value="0.05"></label>
+          <button type="submit">Estimate</button>
+          <span id="factor-result" class="status"></span>
+        </form>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <span>API: <code id="api-base"></code></span>
+  </footer>
+</body>
+</html>
+
